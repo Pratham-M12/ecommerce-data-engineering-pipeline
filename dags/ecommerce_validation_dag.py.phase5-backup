@@ -1,0 +1,109 @@
+﻿from datetime import datetime
+import logging
+import os
+
+import psycopg2
+from airflow import DAG
+from airflow.operators.python import PythonOperator
+
+
+EXPECTED_TABLES = {"customers", "orders", "order_items"}
+
+
+def get_connection():
+    required = [
+        "POSTGRES_HOST",
+        "POSTGRES_PORT",
+        "POSTGRES_DB",
+        "POSTGRES_USER",
+        "POSTGRES_PASSWORD",
+    ]
+    missing = [name for name in required if not os.getenv(name)]
+    if missing:
+        raise RuntimeError(
+            "Missing PostgreSQL environment variables: " + ", ".join(missing)
+        )
+
+    return psycopg2.connect(
+        host=os.environ["POSTGRES_HOST"],
+        port=int(os.environ["POSTGRES_PORT"]),
+        dbname=os.environ["POSTGRES_DB"],
+        user=os.environ["POSTGRES_USER"],
+        password=os.environ["POSTGRES_PASSWORD"],
+        connect_timeout=10,
+    )
+
+
+def check_postgres_connection():
+    with get_connection() as conn:
+        with conn.cursor() as cursor:
+            cursor.execute("SELECT current_database(), current_user")
+            database, user = cursor.fetchone()
+
+            cursor.execute(
+                """
+                SELECT table_name
+                FROM information_schema.tables
+                WHERE table_schema = 'public'
+                  AND table_name IN ('customers', 'orders', 'order_items')
+                """
+            )
+            found = {row[0] for row in cursor.fetchall()}
+
+    missing = EXPECTED_TABLES - found
+    if missing:
+        raise RuntimeError(
+            "Expected PostgreSQL tables are missing: "
+            + ", ".join(sorted(missing))
+        )
+
+    logging.info(
+        "PostgreSQL connection successful. Database=%s, user=%s, tables=%s",
+        database,
+        user,
+        ", ".join(sorted(found)),
+    )
+
+
+def validate_table_counts():
+    counts = {}
+
+    with get_connection() as conn:
+        with conn.cursor() as cursor:
+            for table in sorted(EXPECTED_TABLES):
+                # Table names come only from the fixed allowlist above.
+                cursor.execute(f'SELECT COUNT(*) FROM public."{table}"')
+                counts[table] = cursor.fetchone()[0]
+
+    for table, count in counts.items():
+        logging.info("Table %s: %s rows", table, count)
+
+    empty_tables = [table for table, count in counts.items() if count == 0]
+    if empty_tables:
+        raise RuntimeError(
+            "Expected non-empty tables, but these are empty: "
+            + ", ".join(empty_tables)
+        )
+
+    logging.info("PostgreSQL validation passed.")
+
+
+with DAG(
+    dag_id="ecommerce_validation_dag",
+    description="Read-only validation of the E-Commerce PostgreSQL tables",
+    start_date=datetime(2026, 1, 1),
+    schedule_interval=None,
+    catchup=False,
+    tags=["ecommerce", "validation"],
+) as dag:
+    connection_check = PythonOperator(
+        task_id="check_postgres_connection",
+        python_callable=check_postgres_connection,
+    )
+
+    counts_check = PythonOperator(
+        task_id="validate_table_counts",
+        python_callable=validate_table_counts,
+    )
+
+    connection_check >> counts_check

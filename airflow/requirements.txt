@@ -1,0 +1,19 @@
+# ==============================================================================
+# Apache Airflow Custom Requirements
+# Core dependencies for data transformation, analytics, and connector clients
+# ==============================================================================
+
+# Database and Broker Drivers
+psycopg2-binary==2.9.9
+pymongo==4.7.2
+pika==1.3.2
+
+# Analytics and Batch Processing Engines
+duckdb==0.10.3
+polars==0.20.31
+deltalake==0.17.4
+pyarrow==16.0.0
+pandas==2.2.2
+
+# Search Client
+elasticsearch==8.13.0

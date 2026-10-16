@@ -1,0 +1,62 @@
+# ==============================================================================
+# Git Ignore Configuration - E-Commerce Data Engineering Pipeline
+# ==============================================================================
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Virtual Environments
+venv/
+.venv/
+env/
+ENV/
+
+# Environment Variables & Secrets
+.env
+*.local.env
+
+# Ephemeral runtime data & generated artifacts
+data/raw/*
+!data/raw/.gitkeep
+data/delta/*
+!data/delta/.gitkeep
+reports/*
+!reports/.gitkeep
+
+# NiFi drivers (JARs should be downloaded, not committed) & exports
+nifi/drivers/*.jar
+nifi/exports/*.json
+!nifi/drivers/.gitkeep
+!nifi/exports/.gitkeep
+
+# Airflow logs and runtime files
+airflow_logs/
+logs/
+
+# IDE, OS, and System Files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db

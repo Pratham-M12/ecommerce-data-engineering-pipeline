@@ -1,0 +1,27 @@
+flowchart TD
+    GEN["Python synthetic order generator<br/>src/generator/order_generator.py"]
+    MQ["RabbitMQ<br/>durable message queues"]
+    NIFI["Apache NiFi<br/>consume and route"]
+    MONGO[("MongoDB<br/>raw JSON documents")]
+    PG[("PostgreSQL<br/>customers · orders · order_items")]
+    AF["Apache Airflow<br/>ecommerce_validation_dag"]
+    TRANS["Polars + DuckDB<br/>phase6_transform.py"]
+    DELTA[("Delta Lake<br/>analytical tables")]
+    INDEX["Elasticsearch indexer<br/>phase8_elasticsearch.py"]
+    ES1[("Elasticsearch<br/>ecommerce-orders")]
+    ES2[("Elasticsearch<br/>ecommerce-category-sales")]
+    KIB["Kibana<br/>Data Views · Discover"]
+
+    GEN --> MQ
+    MQ --> NIFI
+    NIFI --> MONGO
+    NIFI --> PG
+    PG --> TRANS
+    AF -. orchestrates .-> TRANS
+    TRANS --> DELTA
+    DELTA --> INDEX
+    AF -. orchestrates .-> INDEX
+    INDEX --> ES1
+    INDEX --> ES2
+    ES1 --> KIB
+    ES2 --> KIB
